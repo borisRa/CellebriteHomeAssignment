@@ -4,13 +4,12 @@ from sentence_transformers import SentenceTransformer, util
 ###########################################################################
 
 
-
 def main() :
 
 	import Aux_Cellebrite as Aux_Cell
 	imp.reload(Aux_Cell)
 
-
+	
 	#Set wokring directory paths-----
 	#---------------------------------
 	path ="/mnt/d/Shared_vm/Home_assessment_Interviews/Cellebrite_2023"
@@ -44,7 +43,6 @@ def main() :
 	#source https://www.sbert.net/docs/pretrained_models.html
 	model = SentenceTransformer('all-MiniLM-L6-v2')
 
-	
 	#Organizes summary segments in accordance with their respective original chat order ----
 	#---------------------------------------------------------------------------------------
 
