@@ -292,10 +292,9 @@ def filter_summaries_with_different_PERSON_entity_compared_to_chat(given_chat_id
 	"""
 
 	#Find all PERSON entities that are in summary piece BUT NOT in the corresponding chat
-	relevant_summaries_df['PERSON_not_in_chat'] = \
-	relevant_summaries_df.apply(\
-						 lambda row: [item for item in row[identification_col].difference(given_chat_identification_set) if item[1]=='PERSON' ]\
-						 ,axis=1)
+	relevant_summaries_df['PERSON_not_in_chat'] =relevant_summaries_df.apply(\
+						lambda row: [item for item in row[identification_col].difference(given_chat_identification_set) if item[1]=='PERSON' ]\
+						,axis=1)
 
 	#Drop all summaries that have PERSON entities that are in summary piece BUT NOT in the corresponding chat
 	relevant_summaries_df = relevant_summaries_df[relevant_summaries_df['PERSON_not_in_chat'].apply(len)==0].copy()
@@ -397,7 +396,7 @@ def run_semantic_textual_similarity_with_S_BERT(given_chat_dialogue_sentence,seg
 	"""
 
 	#Run Semantic Textual Similarity with S-BERT ( Sentence BERT)
-	given_chat_embedding			 = sentence_transformer_model.encode(given_chat_dialogue_sentence, convert_to_tensor=True)
+	given_chat_embedding = sentence_transformer_model.encode(given_chat_dialogue_sentence, convert_to_tensor=True)
 	segments_of_summaries_embeddings = sentence_transformer_model.encode(segments_of_summaries_sentences_list, convert_to_tensor=True)
 	
 	#Compute cosine-similarities for given chat to all chunk summaries ( 1 vecotr versus many)
@@ -434,7 +433,7 @@ def create_order_between_segments_of_summaries(given_chat_df  ,sentence_transfor
 	cosine_scores_1 = run_semantic_textual_similarity_with_S_BERT(given_chat_dialogue,
 																  segments_of_summaries_sentences_list,
 															      sentence_transformer_model)
-
+	
 	#Drop all cosine scores that <= max cosine scores * 0.6 (got this number of many mnaual trials)
 	cosine_scores_1 = cosine_scores_1.numpy()[0]
 	indexes_to_keep = np.where(cosine_scores_1>=np.max(cosine_scores_1) * 0.6)[0]
