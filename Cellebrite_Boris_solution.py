@@ -53,10 +53,10 @@ def main() :
 
 	reconstructed_df = mapped_subset_df.groupby(by=['id'],as_index=False).\
 										apply(Aux_Cell.create_order_between_segments_of_summaries,\
-											  sentence_transformer_model = model,\
-											  chat_text_col ='dialogue',\
-											  summary_piece_text_col ="summary_piece")\
-											  .reset_index(drop=True)  
+									    sentence_transformer_model = model,\
+										chat_text_col ='dialogue',\
+										summary_piece_text_col ="summary_piece")\
+										.reset_index(drop=True)  
 
 	#Reutrn results ---
 	#------------------
