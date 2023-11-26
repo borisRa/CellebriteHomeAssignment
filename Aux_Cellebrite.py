@@ -6,16 +6,7 @@ from sentence_transformers import SentenceTransformer, util
 ###########################################################################
 
 
-"""
-pip install spacy
 
-import spacy
-
-#Got the error [E050] Can't find model 'en_core_web_sm'. It doesn't seem to be a Python package or a valid path to a data directory.
-python -m spacy download en_core_web_sm 
-"""
-
-###########################################
 def setup_paths(path):
 
 	"""
@@ -79,26 +70,13 @@ def Parts_Of_Speech_POS(text,spacy_nlp):
 
 	return ans_set : set of parts of speach (POS)  like :  ('night', 'NOUN'), ('parties', 'NOUN') ,('work', 'NOUN')
 	"""
-
-	# Input sentence
-	#text = "I love using spaCy for natural language processing."
 	
 	# Process the sentence using spaCy
 	doc = spacy_nlp(text)
 	
-	"""
-	pos_dict = {}
-	# Print the parts of speech for each token in the sentence
-	for token in doc:
-		pos_dict[token.text]= token.pos_
-	#token.text : retrieves the text of the token.
-	#token.pos_ : retrieves the part of speech of the token.	
-	"""
-
-	#Took only nouns
-	#The extraction was limited to only the "NOUN" parts of speech due to the excessive noise introduced in similarity metrics when using all parts of speech (POS).
+	#The extraction was limited to only the "NOUN" parts of speech due to the excessive noise 
+	#introduced in similarity metrics when using all parts of speech (POS).
 	nouns_POS = [(token.text, token.pos_)  for token in doc if  token.pos_ == "NOUN"]
-	#all_POS =  [(token.text, token.pos_)  for token in doc]
 	
 	return (set(nouns_POS))
 
@@ -119,22 +97,12 @@ def Named_Entity_Recognition_Model(text,spacy_nlp):
 																	('Saturday night', 'TIME'),('Mike', 'PERSON') ,('Stanley', 'ORG')
 	"""
 	
-	# Load the SpaCy NLP model
-	#spacy_nlp = spacy.load("en_core_web_sm")
-
-
 	# Process the text using SpaCy
 	doc = spacy_nlp(text)
 
-	# Extract names of people (PERSON entities)
-	#people_names = [ent.text for ent in doc.ents if ent.label_ == "PERSON"]
-	#print ("The people names are : ",set(people_names))
-
 	#Don't include 'DATE' entities because it brought too much noise in similarity metrics
 	NER_set = [(ent.text,ent.label_) for ent in doc.ents  if ent.label_ != "DATE"]
-	#print ("All labels are : ",set(all_labels))
 
-	
 	return(set(NER_set))
 
 
@@ -174,18 +142,10 @@ def run_generate_identification_keys(input_df,text_col,spacy_nlp ):
 										('parties', 'NOUN'), ('Joanna', 'PERSON'), ('Daniel', 'PERSON')
 	"""
 
-	#text_col = "summary_piece" ; text_col = "dialogue"
-	#input_df = summary_pieces_df.copy() ;	#input_df = chat_df.copy()
-
 	len_before = len(input_df)
-
 	input_df['identification_keys'] = input_df[text_col].apply(lambda x: generate_identification_keys(x,spacy_nlp))
-
-	#pandarallel.initialize(nb_workers= int(os.cpu_count()) - 1, use_memory_fs = False ) #set num of cores	
-	#input_df['identification_keys'] = input_df[text_col].parallel_apply(lambda x: generate_identification_keys(x,spacy_nlp))
-	#input_df.to_csv("dialogues_with_NER_df.csv",index=False)
-	
 	assert(len_before == len(input_df) )
+
 
 	return(input_df)
 	
@@ -223,9 +183,7 @@ def run_semantic_textual_similarity_with_TFIDF(given_chat_dialogue  ,summary_pie
 	return cosine_scores : cosine-similarities for two TF-IDF vecotors
 
 	'''
-	#print("given_chat_dialogue : " ,given_chat_dialogue)
-	#print("summary_piece_text :  "  ,summary_piece_text)
-
+	
 	#Compute cosine-similarities for two TF-IDF vecotors
 	cosine_scores = cosine_similarity( tf_idf.transform([given_chat_dialogue]), tf_idf.transform([summary_piece_text]))
 
@@ -247,11 +205,6 @@ def map_subset_of_summaries_to_each_chat(chat_df,summary_pieces_df, identificati
 	return result_df : mapped segments of summaries and their respective original chats
 	
 	"""
-
-	#text_col = "summary_piece" ; text_col = "dialogue"
-	#input_df = summary_pieces_df.copy()
-	#input_df = chat_df.copy()
-	
 	
 	# TF-IDF ---------
 	#-----------------
@@ -505,12 +458,6 @@ def create_order_between_segments_of_summaries(given_chat_df  ,sentence_transfor
 
 	"""
 
-	#chat_text_col = 'dialogue' ; summary_piece_text_col ="summary_piece" ;chat_id_col="id"
-	#chat_id = "13728935" ; given_chat_df = mapped_subset_df[mapped_subset_df[chat_id_col] ==chat_id].copy()
-	
-	
-	#print("The chat id is :",given_chat_df['id'].unique()[0])
-
 	given_chat_dialogue = given_chat_df[chat_text_col][0] #Original chat dialogue ; print(given_chat_dialogue)
 	segments_of_summaries_sentences_list = given_chat_df[summary_piece_text_col].values.tolist()
 	"""
@@ -551,10 +498,6 @@ def create_order_between_segments_of_summaries(given_chat_df  ,sentence_transfor
 		print("The chat id is :",given_chat_df['id'].unique()[0] , " No similarities were found !!!")
 		return(reconstructed_df)
 
-
-
-
-
 	# Divide the original  dialogue into sentences, ensuring that the number  --------
 	# of sentencesmatches the desired number of summary chunks ---------------------
 	#-------------------------------------------------------------------------------
@@ -591,10 +534,6 @@ def create_order_between_segments_of_summaries(given_chat_df  ,sentence_transfor
 		reconstructed_summary.extend([best_match_chunk])
 		
 		
-
-	#print("Orignal dialogue \n :",given_chat_dialogue )		
-	#print("Reconstructed summary \n : ", reconstructed_summary)	
-	
 	#Preapre the required results ---
 	#--------------------------------
 	
@@ -626,7 +565,7 @@ def prepare_output(reconstructed_df ,chat_df,chat_id_col="id",summary_col="summa
 		"The returned file must contain the same number of rows as the input(chat_df)."
 	
 	assert(reconstructed_df[chat_id_col].nunique()==chat_df[chat_id_col].nunique()),\
-	"The returned file must contain the unique chat ids as the input(chat_df)."
+		"The returned file must contain the unique chat ids as the input(chat_df)."
 
 	return (reconstructed_df[[chat_id_col,summary_col]])
 		
