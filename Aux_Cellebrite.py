@@ -248,8 +248,7 @@ def map_subset_of_summaries_to_each_chat(chat_df,summary_pieces_df, identificati
 			relevant_summaries_df['similarity'] = relevant_summaries_df.apply(lambda row: run_semantic_textual_similarity_with_TFIDF(
 																			  given_chat_dialogue = given_chat_dialogue,
 																			  summary_piece_text = row["summary_piece"],
-																			  tf_idf = tf_idf ), axis=1)# nice .take top 3
-
+																			  tf_idf = tf_idf ), axis=1)
 			#Extract top N most similar summary chunks
 			relevant_summaries_df = relevant_summaries_df.sort_values(by='similarity',ascending=False)[:top_n].copy()
 			relevant_summaries_df[chat_id_col] = given_chat_id #Set chat ID
@@ -433,7 +432,7 @@ def create_order_between_segments_of_summaries(given_chat_df  ,sentence_transfor
 	cosine_scores_1 = run_semantic_textual_similarity_with_S_BERT(given_chat_dialogue,
 																  segments_of_summaries_sentences_list,
 															      sentence_transformer_model)
-	
+
 	#Drop all cosine scores that <= max cosine scores * 0.6 (got this number of many mnaual trials)
 	cosine_scores_1 = cosine_scores_1.numpy()[0]
 	indexes_to_keep = np.where(cosine_scores_1>=np.max(cosine_scores_1) * 0.6)[0]
