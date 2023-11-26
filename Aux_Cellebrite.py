@@ -1,11 +1,9 @@
+import  sys, os, pandas as pd, numpy as np ,spacy, math
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 
-import  sys , os ,pandas as pd , numpy as np ,spacy ,math
-
-from sklearn.model_selection import train_test_split
-from pandarallel import pandarallel # pip install pandarallel [--upgrade]
-
-
-###########################################
+from sentence_transformers import SentenceTransformer, util
+###########################################################################
 
 
 """
@@ -73,8 +71,17 @@ def get_data():
 
 def Parts_Of_Speech_POS(text,spacy_nlp):
 
+	"""
+	Function that extracts Parts of speech (POS) from a given sentence
+	
+	param text : The text to generate keys from 
+	param spacy_nlp : Spacy object
+
+	return ans_set : set of parts of speach (POS)  like :  ('night', 'NOUN'), ('parties', 'NOUN') ,('work', 'NOUN')
+	"""
+
 	# Input sentence
-	sentence = "I love using spaCy for natural language processing."
+	#text = "I love using spaCy for natural language processing."
 	
 	# Process the sentence using spaCy
 	doc = spacy_nlp(text)
@@ -88,6 +95,8 @@ def Parts_Of_Speech_POS(text,spacy_nlp):
 	#token.pos_ : retrieves the part of speech of the token.	
 	"""
 
+	#Took only nouns
+	#The extraction was limited to only the "NOUN" parts of speech due to the excessive noise introduced in similarity metrics when using all parts of speech (POS).
 	nouns_POS = [(token.text, token.pos_)  for token in doc if  token.pos_ == "NOUN"]
 	#all_POS =  [(token.text, token.pos_)  for token in doc]
 	
@@ -133,7 +142,7 @@ def generate_identification_keys(text,spacy_nlp):
 
 	"""
 	Function that generates identification keys from a given sentence
-	ssch as :  Named Entity Recognition (NER) and Parts Of Speech (POS)
+	such as :  Named Entity Recognition (NER) and Parts Of Speech (POS)
 
 	param text : The text to generate keys from 
 	param spacy_nlp : Spacy object
@@ -202,6 +211,27 @@ def calculate_jaccard_similarity(row_set, given_set):
 	union = len(set(row_set) | given_set)
 	return intersection / union if union != 0 else 0
 
+def run_semantic_textual_similarity_with_TFIDF(given_chat_dialogue  ,summary_piece_text,tf_idf) :
+
+	''' 
+	Function that compute cosine-similarities for two senetnces based on TF-IDF vecotors
+
+	param given_chat_dialogue :  chat dialogue
+	param summary_piece_text : chunks into which the summary was split
+	param tf_idf : fitted TF-IDF vectorizer
+
+	return cosine_scores : cosine-similarities for two TF-IDF vecotors
+
+	'''
+	#print("given_chat_dialogue : " ,given_chat_dialogue)
+	#print("summary_piece_text :  "  ,summary_piece_text)
+
+	#Compute cosine-similarities for two TF-IDF vecotors
+	cosine_scores = cosine_similarity( tf_idf.transform([given_chat_dialogue]), tf_idf.transform([summary_piece_text]))
+
+	
+	return(cosine_scores[0][0])	
+
 def map_subset_of_summaries_to_each_chat(chat_df,summary_pieces_df, identification_col ="identification_keys" ,chat_id_col="id" ):
 
 	"""
@@ -211,7 +241,7 @@ def map_subset_of_summaries_to_each_chat(chat_df,summary_pieces_df, identificati
 	param chat_df : chat conversations with missing summaries
 	param summary_pieces_df : shuffled pieces of summaries for chats in chat_df
 	param identification_col : identification column name
-	param chat_id_col : chat id_column name
+	param chat_id_col : chat id column name
 
 
 	return result_df : mapped segments of summaries and their respective original chats
@@ -222,12 +252,19 @@ def map_subset_of_summaries_to_each_chat(chat_df,summary_pieces_df, identificati
 	#input_df = summary_pieces_df.copy()
 	#input_df = chat_df.copy()
 	
-	#pandarallel.initialize(nb_workers= int(os.cpu_count()) - 1, use_memory_fs = False ) #set num of cores	
+	
+	# TF-IDF ---------
+	#-----------------
+	# Create a TF-IDF vectorizer
+	vectorizer = TfidfVectorizer(min_df = 5 ,max_df =0.95,stop_words='english')
+
+	# Fit on all dialogues in chat_df
+	tf_idf = vectorizer.fit(chat_df['dialogue'])
+	#-----------------
 	
 	
 	#Variable for the outcome of the function 
 	result_df = pd.DataFrame()
-	
 
 	#Heuristic to how many chunks to summary was split
 	top_n = int(len(summary_pieces_df)/len(chat_df)) + 2 #4
@@ -236,6 +273,8 @@ def map_subset_of_summaries_to_each_chat(chat_df,summary_pieces_df, identificati
 
 	# Iterating through rows
 	for index, chat_row in chat_df.iterrows():
+		
+		#chat_row = chat_df[chat_df['id'] =='13829088'].copy()
 
 		#Given chat 
 		given_chat_identification_set = chat_row[identification_col].copy()
@@ -252,12 +291,39 @@ def map_subset_of_summaries_to_each_chat(chat_df,summary_pieces_df, identificati
 		relevant_summaries_df[chat_id_col] = given_chat_id #Set chat ID
 
 
-		#Filter out summaries with differnt PERSON entity relatively to given chat dialogue 
+		#Filter out summaries with different  PERSON entity relatively to given chat dialogue 
 		relevant_summaries_df = filter_summaries_with_different_PERSON_entity_compared_to_chat(given_chat_identification_set,
 																							  relevant_summaries_df,
 																							  identification_col)
 
+		if len(relevant_summaries_df) == 0:
+			
+			print( f"""For given chat ID : '{given_chat_id}'
+					   no similarity was detected based on Named Entity Recognition (NER) and Parts of Speech (POS). Therefore, TF-IDF was applied instead.""")
+			
+			#Get given chat dialogue 
+			given_chat_dialogue = chat_row['dialogue']
+
+			#Taking TOP N most close segments of summaries (from all summary_pieces_df ) based on TF-IDF
+			relevant_summaries_df = summary_pieces_df.copy()
+			relevant_summaries_df['similarity'] = relevant_summaries_df.apply(lambda row: run_semantic_textual_similarity_with_TFIDF(
+																			  given_chat_dialogue = given_chat_dialogue,
+																			  summary_piece_text = row["summary_piece"],
+																			  tf_idf = tf_idf ), axis=1)# nice .take top 3
+
+			#Extract top N most similar summary chunks
+			relevant_summaries_df = relevant_summaries_df.sort_values(by='similarity',ascending=False)[:top_n].copy()
+			relevant_summaries_df[chat_id_col] = given_chat_id #Set chat ID
+
+			#Filter out summaries with different  PERSON entity relatively to given chat dialogue 
+			relevant_summaries_df = filter_summaries_with_different_PERSON_entity_compared_to_chat(given_chat_identification_set,
+																							 	   relevant_summaries_df,
+																							 	   identification_col)
+
+
 		
+		#----------------------------------------------------------------------------------------------
+
 		#Merge summaries to their respective chat 
 		result_tmp_df = pd.merge(left  = chat_df[chat_df[chat_id_col] == given_chat_id].copy() ,
 								 right = relevant_summaries_df, how="left",on=chat_id_col,
@@ -345,7 +411,7 @@ def combine_given_chat_sentences_into_sentences_divided_by_number_of_segments(gi
 	
 
 	"""
-	Goal of this funcion is to combin each 'N' cells from 'given_chat_split_into_sentences' to get the same length  
+	Goal of this funcion is to combain each 'N' lists cells from 'given_chat_split_into_sentences' to achieve the same length  
 	of summary chunks ('num_of_summary_segments').
 	To be able to run sentence similarity between them and order the segments.
 	
@@ -428,7 +494,7 @@ def run_semantic_textual_similarity_with_S_BERT(given_chat_dialogue_sentence,seg
 def create_order_between_segments_of_summaries(given_chat_df  ,sentence_transformer_model, chat_text_col = 'dialogue',summary_piece_text_col ="summary_piece") :
 
 	""" 
-	Function tha maps between segments of summaries  and their respective original chats
+	Function that organizes summary segments in accordance with their respective original chat order.
 
 	param param given_chat_df  : given dialogue chat to analyze
 	param param sentence_transformer_model : S-BERT model
@@ -443,7 +509,7 @@ def create_order_between_segments_of_summaries(given_chat_df  ,sentence_transfor
 	#chat_id = "13728935" ; given_chat_df = mapped_subset_df[mapped_subset_df[chat_id_col] ==chat_id].copy()
 	
 	
-	print("The chat id is :",given_chat_df['id'].unique()[0])
+	#print("The chat id is :",given_chat_df['id'].unique()[0])
 
 	given_chat_dialogue = given_chat_df[chat_text_col][0] #Original chat dialogue ; print(given_chat_dialogue)
 	segments_of_summaries_sentences_list = given_chat_df[summary_piece_text_col].values.tolist()
@@ -461,8 +527,8 @@ def create_order_between_segments_of_summaries(given_chat_df  ,sentence_transfor
 	#Filter out segments of summaries that got low score in semantic textual similarity
 	#when compared to the original chat dialogue (based on S-BERT)
 	cosine_scores_1 = run_semantic_textual_similarity_with_S_BERT(given_chat_dialogue,
-																segments_of_summaries_sentences_list,
-															    sentence_transformer_model)
+																  segments_of_summaries_sentences_list,
+															      sentence_transformer_model)
 
 	"""
 	print("\n Orignal dialogue \n :",given_chat_dialogue )		
@@ -487,9 +553,12 @@ def create_order_between_segments_of_summaries(given_chat_df  ,sentence_transfor
 
 
 
-	# Combine chat sentences for ordering the segments of summaries ----------------
+
+
+	# Divide the original  dialogue into sentences, ensuring that the number  --------
+	# of sentencesmatches the desired number of summary chunks ---------------------
 	#-------------------------------------------------------------------------------
-	
+
 	#Split a a dialogue into sentences based on new lines(\n)
 	given_chat_split_into_sentences  = given_chat_dialogue.split('\n')
 
@@ -498,7 +567,12 @@ def create_order_between_segments_of_summaries(given_chat_df  ,sentence_transfor
 																given_chat_split_into_sentences, segments_of_summaries_sentences_list
 																)
 
-	#Run heurstic_to_order_between_segments_of_summaries
+	"""
+	Execute semantic textual similarity between the sentences of the initial dialogue and the segments of summaries.
+	Choose the segment with the highest cosine similarity score. Proceed to the second sentence and find
+	the most similar segment (excluding the one already selected). 
+	Repeat this process until all dialogue sentences are mapped to the most similar segments of summaries.
+	"""
 	reconstructed_summary = []
 	for given_chat_dialogue_sentence in given_chat_split_into_sentences:
 		
@@ -528,5 +602,34 @@ def create_order_between_segments_of_summaries(given_chat_df  ,sentence_transfor
 	reconstructed_df['summary'] =	" ".join(reconstructed_summary)
 	
 	return(reconstructed_df)
+
+
+#######################################
+# Prepare output in required format
+#######################################
+
+def prepare_output(reconstructed_df ,chat_df,chat_id_col="id",summary_col="summary"):
+
+	""" 
+	Prepare output in required format
+
+	param param reconstructed_df  : data frane with reconstructed summaries
+	param param chat_df : chat conversations with missing summaries
+	param param chat_id_col = chat id column name
+	param param summary_col :   reconstructed summary column name
+
+	return reconstructed_df : Data frame with orderes segments of summaries
+
+	"""
+
+	assert(len(reconstructed_df)==len(chat_df)),\
+		"The returned file must contain the same number of rows as the input(chat_df)."
+	
+	assert(reconstructed_df[chat_id_col].nunique()==chat_df[chat_id_col].nunique()),\
+	"The returned file must contain the unique chat ids as the input(chat_df)."
+
+	return (reconstructed_df[[chat_id_col,summary_col]])
+		
+	
 		
 		

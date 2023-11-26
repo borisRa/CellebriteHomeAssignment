@@ -7,7 +7,10 @@ The submision has three files :
 		 - Aux_Cellebrite.py
 		 - reconstructed_file.csv
 
+
+---
 #### Solution methodology
+---
 
  1. Loading the data into ‘chat_df’, ‘summary_pieces_df’ data frames.
  2. Producing identification keys from the "dialogue" text column in the 'chat_df' and the "summary_piece" text column in the 'summary_pieces_df' (‘run_generate_identification_keys()’).
