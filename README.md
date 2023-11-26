@@ -29,10 +29,10 @@ The submision has three files :
 	- Filter out all summary chunks that have a ‘PERSON’ entity different from given chat dialogue. For instance, exclude summary chunks that reference someone named "Moshe" but were not mentioned in the original dialogue.
 	
 	3.1. If following the filtration process, there are no remaining summary chunks for given chat, then :
-	-  Apply the TF-IDF approach to compute vector representations for the provided chat dialogue and summary segments. Subsequently, utilize cosine similarity to extract the Top N most similar summary chunks.
+	-  Apply the TF-IDF approach to compute vector representations for the provided chat dialogue and **all** summary segments. Subsequently, utilize cosine similarity to extract the Top N most similar summary chunks.
 	- Filter out all summary chunks that have a ‘PERSON’ entity different from given chat dialogue (as above).
 		
-4. Arranging summary segments based on their corresponding original chat order heavily relies on the utilization of S-BERT. S-BERT, a specialized variant of BERT (Bidirectional Encoder Representations from Transformers), is fine-tuned specifically for sentence embeddings in this context (‘create_order_between_segments_of_summaries()’).
+4. Arranging summary segments based on their corresponding original chat **order** heavily relies on the utilization of S-BERT. S-BERT, a specialized variant of BERT (Bidirectional Encoder Representations from Transformers), is fine-tuned specifically for sentence embeddings with context (‘create_order_between_segments_of_summaries()’).
 	-	Filter out segments of summaries that got to low score in semantic textual similarity when compared to the original chat dialogue. Measured through the cosine similarity metric applied to the embeddings of two sentences.
 	-	Divide the original dialogue into sentences, ensuring that the number of sentences matches the desired number of summary chunks.
 	-	Execute semantic textual similarity between the sentences of the initial dialogue and the segments of summaries. Choose the segment with the highest cosine.similarity score. Proceed to the second sentence and find the most similar segment (excluding the one already selected). Repeat this process until all dialogue sentences are mapped to the most similar segments of summaries.
@@ -41,7 +41,12 @@ The submision has three files :
 5. Return the reconstructed data frame in the specified format: "id" representing the dialogue ID and "summary" representing a summary reconstructed from the shuffled pieces.
 
 
+---
+**Summary :**
 
+Identification keys are generated from the "dialogue" text column in 'chat_df' and the "summary_piece" text column in 'summary_pieces_df' to establish a representative footprint for each text. SpaCy is utilized for Named Entity Recognition (NER) and Parts of Speech (POS). Jaccard similarity metrics inform mappings between summary segments and original chats, and various heuristics are applied. S-BERT and TF-IDF play a role in ordering summary segments based on their original chat order, with a subsequent step of filtering out segments with low semantic textual similarity scores.
+
+---
 
 ##### Thank you 😊,
 ##### Boris Rabinovich 
