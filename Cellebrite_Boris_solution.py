@@ -27,7 +27,6 @@ def main() :
 	#---------------------------------
 	chat_df	  = Aux_Cell.run_generate_identification_keys(input_df = chat_df.copy(),text_col = "dialogue",spacy_nlp=spacy_nlp )	
 	summary_pieces_df = Aux_Cell.run_generate_identification_keys(input_df = summary_pieces_df.copy(),text_col = "summary_piece",spacy_nlp=spacy_nlp )
-	#chat_df_bck = chat_df.copy(); summary_pieces_df_bck = summary_pieces_df.copy();
 
 
 	#Establishes mappings between segments of summaries ----
@@ -35,8 +34,6 @@ def main() :
 
 	#Establishes mappings between segments of summaries and their respective original chats.
 	mapped_subset_df = Aux_Cell.map_subset_of_summaries_to_each_chat(chat_df,summary_pieces_df, identification_col ="identification_keys" ,chat_id_col="id" )
-	#mapped_subset_df_bck = mapped_subset_df.copy()
-	#np.sum(mapped_subset_df.similarity.isnull())
 	
 	#Sanity
 	assert(np.any(mapped_subset_df["similarity"].isnull())==False),\
@@ -46,14 +43,14 @@ def main() :
 	#Load the S-BERT model
 	#source https://www.sbert.net/docs/pretrained_models.html
 	model = SentenceTransformer('all-MiniLM-L6-v2')
-	#model = SentenceTransformer('all-mpnet-base-v2')
+
 	
 	#Organizes summary segments in accordance with their respective original chat order ----
 	#---------------------------------------------------------------------------------------
 
 	reconstructed_df = mapped_subset_df.groupby(by=['id'],as_index=False).\
 										apply(Aux_Cell.create_order_between_segments_of_summaries,\
-									    sentence_transformer_model = model,\
+										sentence_transformer_model = model,\
 										chat_text_col ='dialogue',\
 										summary_piece_text_col ="summary_piece")\
 										.reset_index(drop=True)  
