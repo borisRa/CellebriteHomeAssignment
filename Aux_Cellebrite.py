@@ -5,19 +5,14 @@ from sklearn.metrics.pairwise import cosine_similarity
 from sentence_transformers import SentenceTransformer, util
 ###########################################################################
 
-
-
 def setup_paths(path):
 
 	"""
 	Setup the working directory
-
 	param path : Get as input working directory path
 	"""
 
-	#path ="/mnt/d/Shared_vm/Home_assessment_Interviews/Cellebrite_2023"
 	print("The path that was defined is : ",path)
-
 
 	os.chdir(path)
 	sys.path.append(path)
@@ -39,7 +34,6 @@ def get_data():
 	chat_df = pd.read_csv(os.path.join("home_challenge_data","dialogues.csv"),low_memory=False)
 	summary_pieces_df = pd.read_csv(os.path.join("home_challenge_data","summary_pieces.csv"),low_memory=False)
 
-	
 
 	print("chat_df shape is : ",chat_df.shape) # (1400, 2)
 	print("summary_pieces_df shape is : ",summary_pieces_df.shape) #(4053, 1)
@@ -54,8 +48,6 @@ def get_data():
 #####################################
 #Generate identification keys
 #####################################
-
-
 
 #POS - Parts Of Speech --------------
 #------------------------------------
@@ -79,7 +71,6 @@ def Parts_Of_Speech_POS(text,spacy_nlp):
 	nouns_POS = [(token.text, token.pos_)  for token in doc if  token.pos_ == "NOUN"]
 	
 	return (set(nouns_POS))
-
 
 
 #NER - Named_Entity_Recognition -----
@@ -155,7 +146,6 @@ def run_generate_identification_keys(input_df,text_col,spacy_nlp ):
 # and their respective original chats
 ######################################################	
 
-# Function to calculate Jaccard similarity
 def calculate_jaccard_similarity(row_set, given_set):
 	"""
 	Function that computes the Jaccard similarity metric between two sets.
@@ -215,14 +205,11 @@ def map_subset_of_summaries_to_each_chat(chat_df,summary_pieces_df, identificati
 	tf_idf = vectorizer.fit(chat_df['dialogue'])
 	#-----------------
 	
-	
 	#Variable for the outcome of the function 
 	result_df = pd.DataFrame()
 
 	#Heuristic to how many chunks to summary was split
-	top_n = int(len(summary_pieces_df)/len(chat_df)) + 2 #4
-	#Boris : check if to change this to 3 later
-
+	top_n = int(len(summary_pieces_df)/len(chat_df)) + 2  # top_n => 4
 
 	# Iterating through rows
 	for index, chat_row in chat_df.iterrows():
@@ -248,7 +235,6 @@ def map_subset_of_summaries_to_each_chat(chat_df,summary_pieces_df, identificati
 		relevant_summaries_df = filter_summaries_with_different_PERSON_entity_compared_to_chat(given_chat_identification_set,
 																							  relevant_summaries_df,
 																							  identification_col)
-
 		if len(relevant_summaries_df) == 0:
 			
 			print( f"""For given chat ID : '{given_chat_id}'
@@ -271,10 +257,7 @@ def map_subset_of_summaries_to_each_chat(chat_df,summary_pieces_df, identificati
 			#Filter out summaries with different  PERSON entity relatively to given chat dialogue 
 			relevant_summaries_df = filter_summaries_with_different_PERSON_entity_compared_to_chat(given_chat_identification_set,
 																							 	   relevant_summaries_df,
-																							 	   identification_col)
-
-
-		
+																							 	   identification_col)		
 		#----------------------------------------------------------------------------------------------
 
 		#Merge summaries to their respective chat 
@@ -288,9 +271,6 @@ def map_subset_of_summaries_to_each_chat(chat_df,summary_pieces_df, identificati
 		
 		#Rbind all to final result
 		result_df =   pd.concat( [result_df, result_tmp_df ] , axis=0 ) 
-		
-	
-	
 		
 	#Sanity to ensure that the count of unique chat IDs remains the same
 	assert(result_df[chat_id_col].nunique()==chat_df[chat_id_col].nunique())
@@ -313,26 +293,20 @@ def filter_summaries_with_different_PERSON_entity_compared_to_chat(given_chat_id
 
 	#Find all PERSON entities that are in summary piece BUT NOT in the corresponding chat
 	relevant_summaries_df['PERSON_not_in_chat'] = \
-	relevant_summaries_df.apply(
-						 lambda row: [item for item in row[identification_col].difference(given_chat_identification_set) if item[1]=='PERSON' ]
+	relevant_summaries_df.apply(\
+						 lambda row: [item for item in row[identification_col].difference(given_chat_identification_set) if item[1]=='PERSON' ]\
 						 ,axis=1)
 
 	#Drop all summaries that have PERSON entities that are in summary piece BUT NOT in the corresponding chat
 	relevant_summaries_df = relevant_summaries_df[relevant_summaries_df['PERSON_not_in_chat'].apply(len)==0].copy()
 	
-
 	del relevant_summaries_df['PERSON_not_in_chat']
-	return(relevant_summaries_df)
-
-		
+	return(relevant_summaries_df)	
 
 ######################################################
 # Create order between segments of summaries
 # to semantic contents of the chats/dialogue
 ######################################################	
-
-from sentence_transformers import SentenceTransformer, util
-
 def Named_Entity_Recognition_Model(text,spacy_nlp):
 
 	"""
@@ -345,24 +319,16 @@ def Named_Entity_Recognition_Model(text,spacy_nlp):
 																	('Saturday night', 'TIME'),('Mike', 'PERSON') ,('Stanley', 'ORG')
 	"""
 	
-
 	# Process the text using SpaCy
 	doc = spacy_nlp(text)
 
-
 	NER_list = [(ent.text,ent.label_) for ent in doc.ents  ]
-	#print ("All labels are : ",set(all_labels))
-
-	#for i, sent in enumerate(doc.sents, 1):
-	#	print(f"Sentence {i}: {sent.text}")
-
 	
 	return(set(NER_list))
 
 
 def combine_given_chat_sentences_into_sentences_divided_by_number_of_segments(given_chat_split_into_sentences,segments_of_summaries_sentences_list):
 	
-
 	"""
 	Goal of this funcion is to combain each 'N' lists cells from 'given_chat_split_into_sentences' to achieve the same length  
 	of summary chunks ('num_of_summary_segments').
@@ -378,7 +344,6 @@ def combine_given_chat_sentences_into_sentences_divided_by_number_of_segments(gi
 
 	return concatenated_list : Combined sentences
 		
-
 	"""	
 	
 	#Estimation of the number of chunks into which the summary was split
@@ -460,13 +425,6 @@ def create_order_between_segments_of_summaries(given_chat_df  ,sentence_transfor
 
 	given_chat_dialogue = given_chat_df[chat_text_col][0] #Original chat dialogue ; print(given_chat_dialogue)
 	segments_of_summaries_sentences_list = given_chat_df[summary_piece_text_col].values.tolist()
-	"""
-	array(["Lucy tells Ann about Adam's unpleasant behavior in the past.",
-		   "Sean's grandfather celebrates his 100th birthday tomorrow so they're organizing a party for 50 people at the weekend.",
-		   "Emily had also gone out with Lucy a few times and it didn't end up well either.",
-		   "Lula was the other member of this party but he's been falsely imprisoned and now people hate him."],
-		  dtype=object)
-	"""
 
 	# Filter out segments of summaries ----------------
 	#--------------------------------------------------
@@ -476,13 +434,6 @@ def create_order_between_segments_of_summaries(given_chat_df  ,sentence_transfor
 	cosine_scores_1 = run_semantic_textual_similarity_with_S_BERT(given_chat_dialogue,
 																  segments_of_summaries_sentences_list,
 															      sentence_transformer_model)
-
-	"""
-	print("\n Orignal dialogue \n :",given_chat_dialogue )		
-	print("\n segments_of_summaries_sentences_list \n : ", segments_of_summaries_sentences_list)	
-	print("Orignal cosine_scores  :",cosine_scores_1[0] )		
-	"""
-
 
 	#Drop all cosine scores that <= max cosine scores * 0.6 (got this number of many mnaual trials)
 	cosine_scores_1 = cosine_scores_1.numpy()[0]
