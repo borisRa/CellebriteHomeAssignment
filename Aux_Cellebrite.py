@@ -5,22 +5,6 @@ from sklearn.metrics.pairwise import cosine_similarity
 from sentence_transformers import SentenceTransformer, util
 ###########################################################################
 
-def setup_paths(path):
-
-	"""
-	Setup the working directory
-	param path : Get as input working directory path
-	"""
-
-	print("The path that was defined is : ",path)
-
-	os.chdir(path)
-	sys.path.append(path)
-
-	print("My path is :"  , path)	
-	
-###########################################
-
 def get_data():
 
 	"""

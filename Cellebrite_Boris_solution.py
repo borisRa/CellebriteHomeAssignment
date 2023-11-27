@@ -1,19 +1,35 @@
 
-import spacy, math ,imp ,numpy as np
+import os,spacy,sys, math ,imp ,numpy as np
 from sentence_transformers import SentenceTransformer, util
 ###########################################################################
+def setup_paths(path):
 
+	"""
+	Setup the working directory
+
+	param path : Get as input working directory path
+	"""
+
+	#path ="/mnt/d/Shared_vm/Home_assessment_Interviews/Cellebrite_2023"
+	print("The path that was defined is : ",path)
+
+
+	os.chdir(path)
+	sys.path.append(path)
+
+	print("My path is :"  , path)		
+###########################################
 
 def main() :
-
-	import Aux_Cellebrite as Aux_Cell
-	imp.reload(Aux_Cell)
-
 	
 	#Set wokring directory paths-----
 	#---------------------------------
 	path ="/mnt/d/Shared_vm/Home_assessment_Interviews/Cellebrite_2023"
-	Aux_Cell.setup_paths(path)
+	setup_paths(path)
+
+	import Aux_Cellebrite as Aux_Cell
+	imp.reload(Aux_Cell)
+
 
 	#Get Data 
 	(chat_df,summary_pieces_df,id_col) = Aux_Cell.get_data() 
